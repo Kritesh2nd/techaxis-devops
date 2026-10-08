@@ -115,14 +115,17 @@ pipeline {
                                     task-app/docker-compose.yml \
                                     ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.yml
 
-                                echo "Deploying application..."
+                                echo "Creating deployment environment..."
 
                                 ssh -o StrictHostKeyChecking=no \
                                     ${DEPLOY_USER}@${DEPLOY_HOST} \
-                                    "DOCKER_USERNAME='${DOCKER_USERNAME}' \
-                                    DOCKER_PASSWORD='${DOCKER_PASSWORD}' \
-                                    IMAGE_NAME='${IMAGE_NAME}' \
+                                    "IMAGE_NAME='${IMAGE_NAME}' \
                                     IMAGE_TAG='${IMAGE_TAG}' \
+                                    PORT='${PORT}' \
+                                    DATABASE_URL='${DATABASE_URL}' \
+                                    POSTGRES_USER='${POSTGRES_USER}' \
+                                    POSTGRES_PASSWORD='${POSTGRES_PASSWORD}' \
+                                    POSTGRES_DB='${POSTGRES_DB}' \
                                     DEPLOY_PATH='${DEPLOY_PATH}' \
                                     bash -s" << 'EOF'
 
@@ -130,21 +133,29 @@ pipeline {
 
                                     cd "$DEPLOY_PATH"
 
+                                    cat > .env << ENVEOF
+                                        IMAGE_NAME=${IMAGE_NAME}
+                                        IMAGE_TAG=${IMAGE_TAG}
+                                        PORT=${PORT}
+                                        DATABASE_URL=${DATABASE_URL}
+                                        POSTGRES_USER=${POSTGRES_USER}
+                                        POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+                                        POSTGRES_DB=${POSTGRES_DB}
+                                    ENVEOF
+
                                     echo "Logging into Docker Hub..."
 
                                     echo "$DOCKER_PASSWORD" | docker login \
                                         -u "$DOCKER_USERNAME" \
                                         --password-stdin
 
-                                    echo "Pulling image..."
+                                    echo "Pulling image ${IMAGE_NAME}:${IMAGE_TAG}..."
 
                                     docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
 
-                                    echo "Using Docker image ${IMAGE_NAME}:${IMAGE_TAG}..."
+                                    echo "Validating Docker Compose..."
 
-                                    sed -i \
-                                        "0,/image: moudle8848\\/task-app:.*/s|image: moudle8848/task-app:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" \
-                                        docker-compose.yml
+                                    docker compose config
 
                                     echo "Starting application..."
 
@@ -164,13 +175,12 @@ pipeline {
 
                                     echo "Deployment completed successfully."
 
-
                             EOF
                             '''
                         }
                     }
                 }
-             }
+            }
         }
     }
 
