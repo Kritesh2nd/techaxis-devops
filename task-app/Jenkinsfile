@@ -14,7 +14,7 @@ pipeline {
         DEPLOY_CREDENTIALS = 'deploye_server_credentials'
 
         DEPLOY_USER = 'ubuntu'
-        DEPLOY_HOST = '13.59.75.200'
+        DEPLOY_HOST = '18.227.209.204'
         DEPLOY_PATH = '/opt/task-app'
     }
 
@@ -91,27 +91,47 @@ pipeline {
                             echo "Deploying to ${DEPLOY_HOST}..."
 
                             ssh -o StrictHostKeyChecking=no \
+                                ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                "mkdir -p ${DEPLOY_PATH}"
+
+                            echo "Copying docker-compose.yml..."
+
+                            scp -o StrictHostKeyChecking=no \
+                                task-app/docker-compose.yml \
+                                ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.yml
+
+                            ssh -o StrictHostKeyChecking=no \
                                 ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
 
                                 set -e
 
-                                mkdir -p ${DEPLOY_PATH}
                                 cd ${DEPLOY_PATH}
 
-                                docker login \
+                                echo "Logging into Docker Hub..."
+
+                                echo "${DOCKER_PASSWORD}" | docker login \
                                     -u "${DOCKER_USERNAME}" \
-                                    -p "${DOCKER_PASSWORD}" || true
+                                    --password-stdin
+
+                                echo "Pulling image..."
 
                                 docker pull ${IMAGE_NAME}:${IMAGE_TAG}
 
+                                echo "Updating docker-compose.yml..."
+
                                 sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" docker-compose.yml
+
+                                echo "Starting application..."
 
                                 docker compose up -d
 
+                                echo "Cleaning old images..."
+
                                 docker image prune -f
 
+                                echo "Deployment completed successfully."
 
-                        EOF
+                            EOF
                         '''
                     }
                 }
