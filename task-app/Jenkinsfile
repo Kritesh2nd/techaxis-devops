@@ -84,60 +84,69 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    sshagent(credentials: ["${DEPLOY_CREDENTIALS}"]) {
-                        sh '''
-                            set -e
-
-                            echo "Deploying to ${DEPLOY_HOST}..."
-
-                            ssh -o StrictHostKeyChecking=no \
-                                ${DEPLOY_USER}@${DEPLOY_HOST} \
-                                "mkdir -p ${DEPLOY_PATH}"
-
-                            echo "Copying docker-compose.yml..."
-
-                            scp -o StrictHostKeyChecking=no \
-                                task-app/docker-compose.yml \
-                                ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.yml
-
-                            ssh -o StrictHostKeyChecking=no \
-                                ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
-
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: "${DOCKER_CREDENTIALS}",
+                            usernameVariable: 'DOCKER_USERNAME',
+                            passwordVariable: 'DOCKER_PASSWORD'
+                        )
+                    ]) {
+                        sshagent(credentials: ["${DEPLOY_CREDENTIALS}"]) {
+                            sh '''
                                 set -e
 
-                                cd ${DEPLOY_PATH}
+                                echo "Deploying to ${DEPLOY_HOST}..."
 
-                                echo "Logging into Docker Hub..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "mkdir -p ${DEPLOY_PATH}"
 
-                                echo "${DOCKER_PASSWORD}" | docker login \
-                                    -u "${DOCKER_USERNAME}" \
-                                    --password-stdin
+                                echo "Copying docker-compose.yml..."
 
-                                echo "Pulling image..."
+                                scp -o StrictHostKeyChecking=no \
+                                    task-app/docker-compose.yml \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.yml
 
-                                docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                                echo "Deploying application..."
 
-                                echo "Updating docker-compose.yml..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
 
-                                sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" docker-compose.yml
+                                    set -e
 
-                                echo "Starting application..."
+                                    cd ${DEPLOY_PATH}
 
-                                docker compose up -d
+                                    echo "Logging into Docker Hub..."
 
-                                echo "Cleaning old images..."
+                                    echo "${DOCKER_PASSWORD}" | docker login \
+                                        -u "${DOCKER_USERNAME}" \
+                                        --password-stdin
 
-                                docker image prune -f
+                                    echo "Pulling image..."
 
-                                echo "Deployment completed successfully."
+                                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
 
-                            EOF
-                        '''
+                                    echo "Updating docker-compose.yml..."
+
+                                    sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" docker-compose.yml
+
+                                    echo "Starting application..."
+
+                                    docker compose up -d
+
+                                    echo "Cleaning old images..."
+
+                                    docker image prune -f
+
+                                    echo "Deployment completed successfully."
+
+                                EOF
+                            '''
+                        }
                     }
                 }
             }
         }
-    }
 
     post {
         success {
