@@ -30,6 +30,7 @@ pipeline {
                         npm ci
 
                         echo "Building Docker image..."
+
                         docker build \
                             -t ${IMAGE_NAME}:${IMAGE_TAG} \
                             -t ${IMAGE_NAME}:latest \
@@ -66,12 +67,17 @@ pipeline {
                             set -e
 
                             echo "Logging in to Docker Hub..."
+
                             echo "$DOCKER_PASSWORD" | docker login \
                                 -u "$DOCKER_USERNAME" \
                                 --password-stdin
 
-                            echo "Pushing image..."
+                            echo "Pushing image ${IMAGE_NAME}:${IMAGE_TAG}..."
+
                             docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
+                            echo "Pushing latest image..."
+
                             docker push ${IMAGE_NAME}:latest
 
                             docker logout
@@ -97,6 +103,8 @@ pipeline {
 
                                 echo "Deploying to ${DEPLOY_HOST}..."
 
+                                echo "Creating deployment directory..."
+
                                 ssh -o StrictHostKeyChecking=no \
                                     ${DEPLOY_USER}@${DEPLOY_HOST} \
                                     "mkdir -p ${DEPLOY_PATH}"
@@ -110,42 +118,59 @@ pipeline {
                                 echo "Deploying application..."
 
                                 ssh -o StrictHostKeyChecking=no \
-                                    ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "DOCKER_USERNAME='${DOCKER_USERNAME}' \
+                                    DOCKER_PASSWORD='${DOCKER_PASSWORD}' \
+                                    IMAGE_NAME='${IMAGE_NAME}' \
+                                    IMAGE_TAG='${IMAGE_TAG}' \
+                                    DEPLOY_PATH='${DEPLOY_PATH}' \
+                                    bash -s" << 'EOF'
 
                                     set -e
 
-                                    cd ${DEPLOY_PATH}
+                                    cd "$DEPLOY_PATH"
 
                                     echo "Logging into Docker Hub..."
 
-                                    echo "${DOCKER_PASSWORD}" | docker login \
-                                        -u "${DOCKER_USERNAME}" \
+                                    echo "$DOCKER_PASSWORD" | docker login \
+                                        -u "$DOCKER_USERNAME" \
                                         --password-stdin
 
                                     echo "Pulling image..."
 
-                                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                                    docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
 
                                     echo "Updating docker-compose.yml..."
 
-                                    sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" docker-compose.yml
+                                    sed -i \
+                                        "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" \
+                                        docker-compose.yml
 
                                     echo "Starting application..."
 
                                     docker compose up -d
 
+                                    echo "Checking containers..."
+
+                                    docker compose ps
+
                                     echo "Cleaning old images..."
 
                                     docker image prune -f
 
+                                    echo "Logging out from Docker Hub..."
+
+                                    docker logout
+
                                     echo "Deployment completed successfully."
 
-                                EOF
+
+                            EOF
                             '''
                         }
                     }
                 }
-            }
+             }
         }
     }
 
@@ -163,6 +188,5 @@ pipeline {
             sh 'docker logout || true'
         }
     }
-
 
 }
