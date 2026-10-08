@@ -1,0 +1,71 @@
+nest-crud/node_modules/
+nest-crud/dist/
+nest-crud/.next/
+nest-crud/out/
+
+# Environment files
+nest-crud/.env
+nest-crud/.env.*
+!nest-crud/.env.example
+
+# Logs
+nest-crud/*.log
+nest-crud/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+nest-crud/coverage/
+nest-crud/.nyc_output/
+
+# TypeScript
+nest-crud/*.tsbuildinfo
+
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+
+# Terraform crash logs
+terraform/crash.log
+terraform/crash.*.log
+
+# Terraform plans
+terraform/*.tfplan
+terraform/*.plan
+
+# Terraform variable files
+terraform/*.tfvars
+terraform/*.tfvars.json
+
+# Keep example variables
+!terraform/*.tfvars.example
+
+# Generated/private SSH keys
+terraform/*.pem
+terraform/*.key
+terraform/*.pub
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+jenkins_home/
+jenkins-data/
+
+docker-compose.override.yml
+
+*.tmp
+*.temp
+*.bak

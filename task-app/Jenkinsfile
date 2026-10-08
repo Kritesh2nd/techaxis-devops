@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+
+
+    tools {
+        nodejs 'Node-22'
+    }
+
+    environment {
+        IMAGE_NAME = 'moudle8848/task-app'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        DOCKER_CREDENTIALS = 'docker_credentials'
+        DEPLOY_CREDENTIALS = 'deploye_server_credentials'
+
+        DEPLOY_USER = 'ubuntu'
+        DEPLOY_HOST = '0.0.0.0'
+        DEPLOY_PATH = '/opt/task-app'
+    }
+
+    stages {
+
+        stage('Build') {
+            steps {
+                dir('task-app') {
+                    sh '''
+                        set -e
+
+                        echo "Installing dependencies..."
+                        npm ci
+
+                        echo "Building Docker image..."
+                        docker build \
+                            -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                            -t ${IMAGE_NAME}:latest \
+                            .
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('task-app') {
+                    sh '''
+                        set -e
+
+                        echo "Running tests..."
+                        npm test
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                script {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: "${DOCKER_CREDENTIALS}",
+                            usernameVariable: 'DOCKER_USERNAME',
+                            passwordVariable: 'DOCKER_PASSWORD'
+                        )
+                    ]) {
+                        sh '''
+                            set -e
+
+                            echo "Logging in to Docker Hub..."
+                            echo "$DOCKER_PASSWORD" | docker login \
+                                -u "$DOCKER_USERNAME" \
+                                --password-stdin
+
+                            echo "Pushing image..."
+                            docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${IMAGE_NAME}:latest
+
+                            docker logout
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    sshagent(credentials: ["${DEPLOY_CREDENTIALS}"]) {
+                        sh '''
+                            set -e
+
+                            echo "Deploying to ${DEPLOY_HOST}..."
+
+                            ssh -o StrictHostKeyChecking=no \
+                                ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+
+                                set -e
+
+                                mkdir -p ${DEPLOY_PATH}
+                                cd ${DEPLOY_PATH}
+
+                                docker login \
+                                    -u "${DOCKER_USERNAME}" \
+                                    -p "${DOCKER_PASSWORD}" || true
+
+                                docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+
+                                sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" docker-compose.yml
+
+                                docker compose up -d
+
+                                docker image prune -f
+
+
+                        EOF
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully."
+            echo "Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+
+        failure {
+            echo "Pipeline failed."
+        }
+
+        always {
+            sh 'docker logout || true'
+        }
+    }
+
+
+}
