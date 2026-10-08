@@ -115,73 +115,63 @@ pipeline {
                                     task-app/docker-compose.yml \
                                     ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/docker-compose.yml
 
-                                echo "Creating deployment environment..."
+                                echo "Logging into Docker Hub..."
 
                                 ssh -o StrictHostKeyChecking=no \
                                     ${DEPLOY_USER}@${DEPLOY_HOST} \
-                                    "IMAGE_NAME='${IMAGE_NAME}' \
-                                    IMAGE_TAG='${IMAGE_TAG}' \
-                                    PORT='${PORT}' \
-                                    DATABASE_URL='${DATABASE_URL}' \
-                                    POSTGRES_USER='${POSTGRES_USER}' \
-                                    POSTGRES_PASSWORD='${POSTGRES_PASSWORD}' \
-                                    POSTGRES_DB='${POSTGRES_DB}' \
-                                    DEPLOY_PATH='${DEPLOY_PATH}' \
-                                    bash -s" << 'EOF'
+                                    "echo '${DOCKER_PASSWORD}' | docker login \
+                                    -u '${DOCKER_USERNAME}' \
+                                    --password-stdin"
 
-                                    set -e
+                                echo "Pulling image ${IMAGE_NAME}:${IMAGE_TAG}..."
 
-                                    cd "$DEPLOY_PATH"
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "cd ${DEPLOY_PATH} && \
+                                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}"
 
-                                    cat > .env << ENVEOF
-                                        IMAGE_NAME=${IMAGE_NAME}
-                                        IMAGE_TAG=${IMAGE_TAG}
-                                        PORT=${PORT}
-                                        DATABASE_URL=${DATABASE_URL}
-                                        POSTGRES_USER=${POSTGRES_USER}
-                                        POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-                                        POSTGRES_DB=${POSTGRES_DB}
-                                    ENVEOF
+                                echo "Validating Docker Compose..."
 
-                                    echo "Logging into Docker Hub..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "cd ${DEPLOY_PATH} && \
+                                    docker compose config"
 
-                                    echo "$DOCKER_PASSWORD" | docker login \
-                                        -u "$DOCKER_USERNAME" \
-                                        --password-stdin
+                                echo "Starting application..."
 
-                                    echo "Pulling image ${IMAGE_NAME}:${IMAGE_TAG}..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "cd ${DEPLOY_PATH} && \
+                                    docker compose up -d"
 
-                                    docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
+                                echo "Checking containers..."
 
-                                    echo "Validating Docker Compose..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "cd ${DEPLOY_PATH} && \
+                                    docker compose ps"
 
-                                    docker compose config
+                                echo "Cleaning old images..."
 
-                                    echo "Starting application..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "docker image prune -f"
 
-                                    docker compose up -d
+                                echo "Logging out from Docker Hub..."
 
-                                    echo "Checking containers..."
+                                ssh -o StrictHostKeyChecking=no \
+                                    ${DEPLOY_USER}@${DEPLOY_HOST} \
+                                    "docker logout"
 
-                                    docker compose ps
-
-                                    echo "Cleaning old images..."
-
-                                    docker image prune -f
-
-                                    echo "Logging out from Docker Hub..."
-
-                                    docker logout
-
-                                    echo "Deployment completed successfully."
-
-                            EOF
+                                echo "Deployment completed successfully."
                             '''
                         }
                     }
                 }
             }
         }
+
+
     }
 
     post {
