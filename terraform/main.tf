@@ -18,7 +18,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-2"
 }
 
 resource "tls_private_key" "ssh_key" {
@@ -56,7 +56,7 @@ resource "aws_internet_gateway" "kritesh_igw" {
 resource "aws_subnet" "kritesh_subnet" {
   vpc_id                  = aws_vpc.kritesh_vpc.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"
+  availability_zone       = "us-east-2a"
   map_public_ip_on_launch = true
 
   tags = {

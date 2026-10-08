@@ -73,6 +73,12 @@ apt-get install -y \
 systemctl enable docker
 systemctl start docker
 
+usermod -aG docker ubuntu
+
+mkdir -p /opt/task-app
+
+chown -R ubuntu:ubuntu /opt/task-app
+
 mkdir -p /opt/promtail
 mkdir -p /var/lib/promtail
 mkdir -p /etc/promtail
