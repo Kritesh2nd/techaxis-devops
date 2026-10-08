@@ -140,10 +140,10 @@ pipeline {
 
                                     docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
 
-                                    echo "Updating docker-compose.yml..."
+                                    echo "Using Docker image ${IMAGE_NAME}:${IMAGE_TAG}..."
 
                                     sed -i \
-                                        "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" \
+                                        "0,/image: moudle8848\\/task-app:.*/s|image: moudle8848/task-app:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" \
                                         docker-compose.yml
 
                                     echo "Starting application..."
