@@ -139,6 +139,15 @@ resource "aws_security_group" "deployment_sg" {
     cidr_blocks = [var.my_ip]
   }
 
+  ingress {
+    description = "SSH from Jenkins"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+
+    security_groups = [aws_security_group.pipeline_sg.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
