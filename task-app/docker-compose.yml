@@ -1,7 +1,7 @@
 services:
 
 app:
-image: moudle8848/task-app
+image: ${IMAGE_NAME}:${IMAGE_TAG}
 container_name: task-app
 restart: unless-stopped
 
