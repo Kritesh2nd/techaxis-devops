@@ -1,20 +1,16 @@
-aws ec2 stop-instances --instance-ids i-0308c3e6e73f382e9 i-0b8096382ad88cd11 i-027e03de08fd72e5a
+aws ec2 stop-instances --instance-ids i-0344fa5120d2d600d i-0e57095e1568f9de9 i-0785e27063cdb4833
 
-
-i-0f5b84fc728c8a53e i-06173f056a562537f i-0f2b2995e3767bebc
-
-Outputs:
-
-deployment_instance_id = "i-0f5b84fc728c8a53e"
+❯ terraform output
+deployment_instance_id = "i-0344fa5120d2d600d"
 deployment_public_dns = ""
-deployment_public_ip = "3.87.142.140"
-jenkins_instance_id = "i-06173f056a562537f"
+deployment_public_ip = "16.59.41.53"
+jenkins_instance_id = "i-0e57095e1568f9de9"
 jenkins_public_dns = ""
-jenkins_public_ip = "18.206.170.135"
-loki_url = "http://10.0.1.134:3100"
-monitoring_instance_id = "i-0f2b2995e3767bebc"
-monitoring_private_ip = "10.0.1.134"
+jenkins_public_ip = "3.128.172.198"
+loki_url = "http://10.0.1.223:3100"
+monitoring_instance_id = "i-0785e27063cdb4833"
+monitoring_private_ip = "10.0.1.223"
 monitoring_public_dns = ""
-monitoring_public_ip = "34.227.227.150"
+monitoring_public_ip = "18.226.172.130"
 private_key_file = "./my-ec2-key.pem"
-ssh_key_name = "blueprint-notes-key"
+ssh_key_name = "nest-crud-key"
