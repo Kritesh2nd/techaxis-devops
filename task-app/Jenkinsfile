@@ -14,7 +14,7 @@ pipeline {
         DEPLOY_CREDENTIALS = 'deploye_server_credentials'
 
         DEPLOY_USER = 'ubuntu'
-        DEPLOY_HOST = '10.0.1.207'
+        DEPLOY_HOST = '10.0.1.109'
         DEPLOY_PATH = '/opt/task-app'
     }
 
